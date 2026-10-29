@@ -1,7 +1,18 @@
-// App.js basemap dasar dari API MAPID
-const basemapStreet = 'https://basemap.mapid.io/styles/street-2d-building/style.json?key=69a8edeffdb1d3dbc8b3022c';
-const basemapDark = 'https://basemap.mapid.io/styles/dark/style.json?key=69a8edeffdb1d3dbc8b3022c';
-const basemapSatellite = 'https://basemap.mapid.io/styles/satellite/style.json?key=69a8edeffdb1d3dbc8b3022c';
+// Basemap gratis tanpa API key
+const basemapStreet = 'https://tiles.openfreemap.org/styles/liberty';
+const basemapDark = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const basemapSatellite = {
+    version: 8,
+    sources: {
+        esri: {
+            type: 'raster',
+            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+            tileSize: 256,
+            attribution: 'Imagery © Esri'
+        }
+    },
+    layers: [{ id: 'esri', type: 'raster', source: 'esri' }]
+};
 
 // Container id harus sama dengan yang ada di index.html
 // style dari API yang ada di const diatas
@@ -13,13 +24,16 @@ const map = new maplibregl.Map({
     center: [110.407609, -6.982276],
     zoom: 12
 })
-// Menambahkan url rumah sakit di kota semarang dari API MApID
-const url_rs= 'https://geoserver.mapid.io/layers_new/get_layer?api_key=fb6e2780711141a0a171dd398b5be6f8&layer_id=697b23c047aaef41cdd4df6b&project_id=69776f93e21f36c17f9c7004'
+// Data MAPID disimpan sebagai file lokal oleh scripts/download_mapid.py,
+// sehingga API key tidak perlu ditulis di kode yang bisa dilihat publik
+const url_rs = 'data/rumah_sakit_semarang.geojson'
 // Menambahkan url polygon batas adminsitrasi bandung dari API MAPID
-const url_administrasi = 'https://geoserver.mapid.io/layers_new/get_layer?api_key=fb6e2780711141a0a171dd398b5be6f8&layer_id=69ad12cd02854d1dfe4d287f&project_id=69776f93e21f36c17f9c7004'
+const url_administrasi = 'data/administrasi_semarang.geojson'
 const url_jalan = 'https://overpass.kumi.systems/api/interpreter?data=[out:json][timeout:25];area[name="Semarang"]["boundary"="administrative"]->.a;(way["highway"~"primary|secondary|tertiary"](area.a););out geom;'
 
-map.on('load', () =>{
+// 'style.load' dipanggil saat peta pertama dimuat DAN setiap kali basemap diganti,
+// sehingga layer data tidak hilang setelah setStyle()
+map.on('style.load', () =>{
     async function loadData(){
         // Mengambil data rumah sakit dari API menggunakan fetch
         const rsResponse = await fetch(url_rs);
@@ -76,7 +90,19 @@ map.on('load', () =>{
         // Mengambil data jalan dari API
         const jalanResponse = await fetch(url_jalan);
         // Mengonversi respons menjadi format JSON
-        const jalanData = await jalanResponse.json();
+        const jalanOsm = await jalanResponse.json();
+        // Overpass mengembalikan format JSON OSM, bukan GeoJSON, jadi perlu dikonversi dulu.
+        // Setiap way (dengan "out geom") punya daftar titik {lat, lon} yang menjadi LineString.
+        const jalanData = {
+            type: 'FeatureCollection',
+            features: jalanOsm.elements
+                .filter((el) => el.type === 'way' && el.geometry)
+                .map((el) => ({
+                    type: 'Feature',
+                    properties: { nama: el.tags?.name, kelas: el.tags?.highway },
+                    geometry: { type: 'LineString', coordinates: el.geometry.map((p) => [p.lon, p.lat]) }
+                }))
+        };
 
         // Menambahkan data jalan ke peta
         map.addSource('jalan', {
@@ -109,7 +135,6 @@ map.on('click', 'rumah-sakit-layer', (event)=>{
     console.log('FEATURES', features);
     console.log('COORDINATES', coordinates);
     console.log('HASIL EVEN CLICK', event);
-    console.log("JALAN DATA", jalanData);
 
     // Membuat konten HTML untuk popup berdasarkan properti fitur
     const html = `
@@ -130,15 +155,15 @@ map.on('click', 'rumah-sakit-layer', (event)=>{
 
 // Fungsi untuk mengubah gaya peta ke gaya satelit
 window.updateStyleToSatellite = ()=>{
-    map.setStyle(basemapSatellite)
+    map.setStyle(basemapSatellite, { diff: false })
 }
 // Fungsi untuk mengubah gaya peta ke gaya dark
 window.updateStyleToDark = ()=>{
-    map.setStyle(basemapDark)
+    map.setStyle(basemapDark, { diff: false })
 }
 // Fungsi untuk mengubah gaya peta ke gaya street
 window.updateStyleToStreet = ()=>{
-    map.setStyle(basemapStreet)
+    map.setStyle(basemapStreet, { diff: false })
 }
 
 // Fungsi toggle layer rumah sakit
@@ -146,7 +171,7 @@ window.toggleLayerRumahSakit = () =>{
     const visibility = map.getLayoutProperty('rumah-sakit-layer', 'visibility')
    
     // ketika diklik keadaannya mati, maka layer dibuat nyala, begitu juga sebaliknya
-    const nextState = visibility === 'visible' ? 'none' : 'visible'; // Menentukan status berikutnya berdasarkan status saat ini
+    const nextState = visibility === 'none' ? 'visible' : 'none'; // Menentukan status berikutnya berdasarkan status saat ini
 
     console.log('visibility', visibility);
     console.log('nextState', nextState);
@@ -158,7 +183,7 @@ window.toggleLayerAdministrasi = () =>{
     const visibility = map.getLayoutProperty('administrasi-layer', 'visibility')
    
     // ketika diklik keadaannya mati, maka layer dibuat nyala, begitu juga sebaliknya
-    const nextState = visibility === 'visible' ? 'none' : 'visible'; // Menentukan status berikutnya berdasarkan status saat ini
+    const nextState = visibility === 'none' ? 'visible' : 'none'; // Menentukan status berikutnya berdasarkan status saat ini
 
     console.log('visibility', visibility);
     console.log('nextState', nextState);
@@ -170,7 +195,7 @@ window.toggleLayerJalan = () =>{
     const visibility = map.getLayoutProperty('jalan-layer', 'visibility')
    
     // ketika diklik keadaannya mati, maka layer dibuat nyala, begitu juga sebaliknya
-    const nextState = visibility === 'visible' ? 'none' : 'visible'; // Menentukan status berikutnya berdasarkan status saat ini
+    const nextState = visibility === 'none' ? 'visible' : 'none'; // Menentukan status berikutnya berdasarkan status saat ini
 
     console.log('visibility', visibility);
     console.log('nextState', nextState);
