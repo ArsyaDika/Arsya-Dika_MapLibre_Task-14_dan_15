@@ -1,7 +1,18 @@
-// App.js basemap dasar dari API MAPID
-const basemapStreet = 'https://basemap.mapid.io/styles/street-2d-building/style.json?key=69a8edeffdb1d3dbc8b3022c';
-const basemapDark = 'https://basemap.mapid.io/styles/dark/style.json?key=69a8edeffdb1d3dbc8b3022c';
-const basemapSatellite = 'https://basemap.mapid.io/styles/satellite/style.json?key=69a8edeffdb1d3dbc8b3022c';
+// Basemap gratis tanpa API key
+const basemapStreet = 'https://tiles.openfreemap.org/styles/liberty';
+const basemapDark = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const basemapSatellite = {
+    version: 8,
+    sources: {
+        esri: {
+            type: 'raster',
+            tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+            tileSize: 256,
+            attribution: 'Imagery © Esri'
+        }
+    },
+    layers: [{ id: 'esri', type: 'raster', source: 'esri' }]
+};
 
 // Container id harus sama dengan yang ada di index.html
 // style dari API yang ada di const diatas
@@ -13,13 +24,16 @@ const map = new maplibregl.Map({
     center: [107.605743, -6.916823],
     zoom: 12
 })
-// Menambahkan url apartemen dari API MApID
-const url_apartemen = 'https://geoserver.mapid.io/layers_new/get_layer?api_key=7b8019aa264248e89e3fd5b27253132f&layer_id=69ace1b8643f7636a769ce7c&project_id=69ab9fb96c69e6252868efaf'
+// Data MAPID disimpan sebagai file lokal oleh scripts/download_mapid.py,
+// sehingga API key tidak perlu ditulis di kode yang bisa dilihat publik
+const url_apartemen = 'data/apartemen_bandung.geojson'
 // Menambahkan url polygon batas adminsitrasi bandung dari API MAPID
-const url_administrasi = 'https://geoserver.mapid.io/layers_new/get_layer?api_key=7b8019aa264248e89e3fd5b27253132f&layer_id=69ace7646c69e62528aa09c5&project_id=69ab9fb96c69e6252868efaf'
+const url_administrasi = 'data/administrasi_bandung.geojson'
 const url_drainase = 'https://geodata.bandung.go.id/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typename=geonode%3ADrainase_2022&outputFormat=json&srs=EPSG%3A4326&srsName=EPSG%3A4326'
 
-map.on('load', () =>{
+// 'style.load' dipanggil saat peta pertama dimuat DAN setiap kali basemap diganti,
+// sehingga layer data tidak hilang setelah setStyle()
+map.on('style.load', () =>{
     async function loadData(){
         // Mengambil data apartemen dari API menggunakan fetch
         const apartemenResponse = await fetch(url_apartemen);
@@ -127,15 +141,15 @@ map.on('click', 'apartemen-layer', (event)=>{
 
 // Fungsi untuk mengubah gaya peta ke gaya satelit
 window.updateStyleToSatellite = ()=>{
-    map.setStyle(basemapSatellite)
+    map.setStyle(basemapSatellite, { diff: false })
 }
 // Fungsi untuk mengubah gaya peta ke gaya dark
 window.updateStyleToDark = ()=>{
-    map.setStyle(basemapDark)
+    map.setStyle(basemapDark, { diff: false })
 }
 // Fungsi untuk mengubah gaya peta ke gaya street
 window.updateStyleToStreet = ()=>{
-    map.setStyle(basemapStreet)
+    map.setStyle(basemapStreet, { diff: false })
 }
 
 // Fungsi toggle layer apartemen
@@ -143,7 +157,7 @@ window.toggleLayerApartemen = () =>{
     const visibility = map.getLayoutProperty('apartemen-layer', 'visibility')
    
     // ketika diklik keadaannya mati, maka layer dibuat nyala, begitu juga sebaliknya
-    const nextState = visibility === 'visible' ? 'none' : 'visible'; // Menentukan status berikutnya berdasarkan status saat ini
+    const nextState = visibility === 'none' ? 'visible' : 'none'; // Menentukan status berikutnya berdasarkan status saat ini
 
     console.log('visibility', visibility);
     console.log('nextState', nextState);
@@ -155,7 +169,7 @@ window.toggleLayerAdministrasi = () =>{
     const visibility = map.getLayoutProperty('administrasi-layer', 'visibility')
    
     // ketika diklik keadaannya mati, maka layer dibuat nyala, begitu juga sebaliknya
-    const nextState = visibility === 'visible' ? 'none' : 'visible'; // Menentukan status berikutnya berdasarkan status saat ini
+    const nextState = visibility === 'none' ? 'visible' : 'none'; // Menentukan status berikutnya berdasarkan status saat ini
 
     console.log('visibility', visibility);
     console.log('nextState', nextState);
@@ -167,7 +181,7 @@ window.toggleLayerDrainase = () =>{
     const visibility = map.getLayoutProperty('drainase-layer', 'visibility')
    
     // ketika diklik keadaannya mati, maka layer dibuat nyala, begitu juga sebaliknya
-    const nextState = visibility === 'visible' ? 'none' : 'visible'; // Menentukan status berikutnya berdasarkan status saat ini
+    const nextState = visibility === 'none' ? 'visible' : 'none'; // Menentukan status berikutnya berdasarkan status saat ini
 
     console.log('visibility', visibility);
     console.log('nextState', nextState);
