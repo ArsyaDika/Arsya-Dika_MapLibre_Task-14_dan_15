@@ -34,7 +34,7 @@ Tasks 14 and 15 of the WebGIS Developer bootcamp.
 
 ## Notes on fixes
 
-- **API key removed from the code.** The basemaps use OpenFreeMap, CARTO Dark Matter and Esri World Imagery, all without a key. The MAPID data is downloaded once into `data/`. The old key is still in the commit history, so it should be revoked in the MAPID dashboard.
+- **API key removed from the code.** The basemaps use OpenFreeMap, CARTO Dark Matter and Esri World Imagery, all without a key. The MAPID data is downloaded once into `data/`.
 - Layers no longer disappear after the basemap is switched.
 - The toggle buttons now work on the first click (previously they needed two).
 - `index_smg.html` now loads `app_SMG.js` (it previously loaded the Bandung version, `app.js`).
@@ -87,7 +87,7 @@ Tugas 14 dan 15 bootcamp WebGIS Developer.
 
 ## Catatan perbaikan
 
-- **API key dihapus dari kode.** Basemap memakai OpenFreeMap, CARTO Dark Matter, dan Esri World Imagery tanpa key. Data MAPID diunduh sekali ke `data/`. Key lama masih ada di riwayat commit, jadi sebaiknya dicabut di dashboard MAPID.
+- **API key dihapus dari kode.** Basemap memakai OpenFreeMap, CARTO Dark Matter, dan Esri World Imagery tanpa key. Data MAPID diunduh sekali ke `data/`.
 - Layer tidak lagi hilang setelah basemap diganti.
 - Tombol toggle langsung bekerja pada klik pertama (sebelumnya perlu dua klik).
 - `index_smg.html` sekarang memuat `app_SMG.js` (sebelumnya memuat `app.js` versi Bandung).
